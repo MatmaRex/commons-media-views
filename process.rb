@@ -3,6 +3,8 @@ require 'uri'
 require 'yajl'
 require 'set'
 
+GC.disable
+
 dirpath = 'dumps.wikimedia.org/other/mediacounts/daily'
 extensions = Hash[ %w[mid ogg ogv wav webm flac oga].map{|ext| [ext, true] } ]
 bzfiles = Dir.glob("#{dirpath}/*/*.bz2")
@@ -20,10 +22,18 @@ bzfiles.each do |bzfname|
 		next
 	end
 	
+	GC.enable; GC.start; GC.disable
 	pipe = IO.popen(['bzcat', bzfname], 'rb', encoding: 'utf-8')
 	
+	n = 0
 	while true
+		n += 1
+		if n % 1_000_000 == 0
+			GC.enable; GC.start; GC.disable
+		end
+		
 		path = pipe.gets("\t")
+		
 		if path =~ %r|^/wikipedia/commons/[0-9a-f]/|
 			# remove the path prefix: '/wikipedia/commons/h/hh/'
 			# remove trailing tab
@@ -46,6 +56,7 @@ bzfiles.each do |bzfname|
 		break if pipe.eof?
 	end
 	
+	GC.enable # encoding allocates too many objects
 	File.open('data.json', 'wb') do |f|
 		Yajl::Encoder.encode data, f, pretty: true
 	end
