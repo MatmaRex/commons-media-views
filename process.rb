@@ -1,13 +1,15 @@
 # encoding: utf-8
 require 'uri'
-require 'json'
+require 'yajl'
 require 'set'
 
 dirpath = 'dumps.wikimedia.org/other/mediacounts/daily'
 extensions = Hash[ %w[mid ogg ogv wav webm flac oga].map{|ext| [ext, true] } ]
 bzfiles = Dir.glob("#{dirpath}/*/*.bz2")
 
-data = JSON.parse File.read('data.json', encoding: 'utf-8'), symbolize_names: true
+data = File.open('data.json', 'rb') do |f|
+	Yajl::Parser.new(symbolize_keys: true).parse f
+end
 done_days = Set.new data.values.map(&:keys).flatten
 
 bzfiles.each do |bzfname|
@@ -44,6 +46,8 @@ bzfiles.each do |bzfname|
 		break if pipe.eof?
 	end
 	
-	File.binwrite('data.json', JSON.pretty_generate(data))
+	File.open('data.json', 'wb') do |f|
+		Yajl::Encoder.encode data, f, pretty: true
+	end
 	puts bzfname
 end
