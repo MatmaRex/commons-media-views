@@ -3,9 +3,9 @@ require 'uri'
 require 'json'
 require 'set'
 
-dirpath = 'dumps.wikimedia.org/other/mediacounts/daily/2015'
+dirpath = 'dumps.wikimedia.org/other/mediacounts/daily'
 extensions = Hash[ %w[mid ogg ogv wav webm flac oga].map{|ext| [ext, true] } ]
-bzfiles = Dir.entries(dirpath).grep(/bz2/)
+bzfiles = Dir.glob("#{dirpath}/*/*.bz2")
 
 data = JSON.parse File.read('data.json', encoding: 'utf-8'), symbolize_names: true
 done_days = Set.new data.values.map(&:keys).flatten
@@ -18,7 +18,7 @@ bzfiles.each do |bzfname|
 		next
 	end
 	
-	pipe = IO.popen(['bzcat', "#{dirpath}/#{bzfname}"], 'rb', encoding: 'utf-8')
+	pipe = IO.popen(['bzcat', bzfname], 'rb', encoding: 'utf-8')
 	
 	while true
 		path = pipe.gets("\t")
